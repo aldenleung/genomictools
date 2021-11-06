@@ -1,4 +1,4 @@
 include genomictools/genomic.pxd
-include genomictools/genomictools.cpp
 include genomictools/genomic.cpp
 include genomictools/genomic.h
+include genomictools/__init__.cpp
