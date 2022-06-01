@@ -48,13 +48,19 @@ cdef class GenomicPos(GenomicAnnotation):
 
 	def __init__(self, name, start=None, stop=None):
 		if start is None:
-			try:
-				name, start, stop = _genomic_pos_pattern.match(name).groups()
-				start = int(start)
-				if stop is not None:
-					stop = int(stop)
-			except:
-				raise Exception("Cannot parse genomic_pos str " + name)
+			if hasattr(name, "genomic_pos"):
+				r = name.genomic_pos
+				name = r.name
+				start = r.start
+				stop = r.stop
+			else:
+				try:
+					name, start, stop = _genomic_pos_pattern.match(name).groups()
+					start = int(start)
+					if stop is not None:
+						stop = int(stop)
+				except:
+					raise Exception("Cannot parse genomic_pos str " + name)
 		self.name = name
 		if stop is None:
 			stop = start
