@@ -10,10 +10,12 @@ from collections import defaultdict
 from genomictools.genomic cimport BaseRange
 from genomictools.genomic cimport GenomicPosHolder, FastRangeLookUp, vector
 
-__all__ = ["GenomicAnnotation", "GenomicPos", "AbstractGenomicCollection", "GenomicCollection", "union", "intersection", "substract"]
+__all__ = ["GenomicAnnotation", "StrandedGenomicAnnotation", "GenomicPos", "StrandedGenomicPos", "AbstractGenomicCollection", "GenomicCollection", "union", "intersection", "substract"]
 
 
 _genomic_pos_pattern = re.compile("([^:]+):(-?[0-9]+)(?:-(-?[0-9]+))?") # Used in parsing GenomicPos string
+_stranded_genomic_pos_pattern = re.compile("([^:]+):(-?[0-9]+)(?:-(-?[0-9]+))?:([+\\-.])")	
+
 @cython.auto_pickle(False)
 cdef class GenomicAnnotation():
 	'''
@@ -26,6 +28,13 @@ cdef class GenomicAnnotation():
 		'''
 		pass
 
+@cython.auto_pickle(False)		
+cdef class StrandedGenomicAnnotation(GenomicAnnotation):
+	@property
+	def stranded_genomic_pos(self):
+		pass
+
+		
 @cython.binding(True)
 @cython.auto_pickle(True)
 cdef class GenomicPos(GenomicAnnotation):
@@ -155,7 +164,131 @@ cdef class GenomicPos(GenomicAnnotation):
 		'''
 		return self
 
+@cython.binding(True)
+@cython.auto_pickle(True)
+cdef class StrandedGenomicPos(StrandedGenomicAnnotation):
 
+	cdef str name
+	cdef int zstart
+	cdef int ostop
+	cdef str strand
+	
+	def __init__(self, name, start=None, stop=None, strand=None):
+		if start is None:
+			if hasattr(name, "stranded_genomic_pos"):
+				r = name.genomic_pos
+				name = r.name
+				start = r.start
+				stop = r.stop
+				strand = r.strand
+			else:
+				try:
+					name, start, stop, strand = _stranded_genomic_pos_pattern.match(name).groups()
+					start = int(start)
+					if stop is not None:
+						stop = int(stop)
+				except:
+					raise Exception("Cannot parse genomic_pos str " + name)
+		
+		self.name = name
+		if stop is None:
+			stop = start
+		self.zstart = start - 1
+		self.ostop = stop
+		self.strand = strand
+		
+	cpdef bint overlaps(self, GenomicAnnotation other):
+		'''
+		check if this GenomicPos overlaps with the other GenomicPos
+		'''
+		other = other.genomic_pos
+		return self.name == other.name and self.ostop > other.zstart and other.ostop > self.zstart
+	
+
+	def __hash__(self):
+		return hash((self.name, self.start, self.stop, self.strand))
+	def __len__(self):
+		return self.ostop - self.zstart
+	
+	def __eq__(self, other):
+		if not isinstance(other, StrandedGenomicPos):
+			return NotImplemented
+		return self.zstart == other.zstart and self.ostop == other.ostop and self.name == other.name and self.strand == other.strand
+
+	def __lt__(self, other):
+		if not isinstance(other, GenomicPos):
+			return NotImplemented
+		return ((self.name < other.name) 
+				or (self.name == other.name and 
+					((self.zstart < other.zstart) or (self.zstart == other.zstart and self.ostop < other.ostop))))
+	
+	def __contains__(self, GenomicAnnotation target_pos):
+		target_pos = target_pos.genomic_pos
+		return self.name == target_pos.name and self.zstart <= target_pos.zstart and self.ostop >= target_pos.ostop
+	
+	def __str__(self):
+		return self.name + ":" + str(self.ostart) + "-" + str(self.ostop) + ":" + str(self.strand)
+		
+	@property
+	def name(self):
+		'''
+		The chromosome name
+		'''
+		return self.name
+	
+	@property
+	def zstart(self):
+		'''
+		The start position (0-based)
+		'''
+		return self.zstart
+	
+	@property
+	def zstop(self):
+		'''
+		The stop position (0-based)
+		'''
+		return self.ostop - 1
+	
+	@property
+	def ostart(self):
+		'''
+		The start position (1-based)
+		'''
+		return self.zstart + 1
+	
+	@property
+	def ostop(self):
+		'''
+		The stop position (1-based)
+		'''
+		return self.ostop
+	
+	@property
+	def start(self):
+		'''
+		The start position (1-based)
+		'''
+		return self.ostart
+
+	@property
+	def stop(self):
+		'''
+		The stop position (1-based)
+		'''
+		return self.ostop
+	
+	@property
+	def genomic_pos(self):
+		'''
+		The GenomicPos representation of this object
+		'''
+		return GenomicPos(self.name, self.start, self.stop)
+		
+	@property
+	def stranded_genomic_pos(self):
+		return self
+		
 cdef class AbstractGenomicCollection():
 	'''
 	A base class for all GenomicCollection implementations.
