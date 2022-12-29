@@ -76,10 +76,11 @@ cdef class GenomicPos(GenomicAnnotation):
 		self.zstart = start - 1
 		self.ostop = stop
 	
-	cpdef bint overlaps(self, GenomicPos other):
+	cpdef bint overlaps(self, GenomicAnnotation other):
 		'''
 		check if this GenomicPos overlaps with the other GenomicPos
 		'''
+		other = other.genomic_pos
 		return self.name == other.name and self.ostop > other.zstart and other.ostop > self.zstart
 	
 	
@@ -91,8 +92,9 @@ cdef class GenomicPos(GenomicAnnotation):
 	
 
 	def __lt__(self, other):
-		if not isinstance(other, GenomicPos):
+		if not isinstance(other, GenomicAnnotation):
 			return NotImplemented
+		other = other.genomic_pos	
 		return ((self.name < other.name) 
 				or (self.name == other.name and 
 					((self.zstart < other.zstart) or (self.zstart == other.zstart and self.ostop < other.ostop))))
@@ -181,6 +183,11 @@ cdef class StrandedGenomicPos(StrandedGenomicAnnotation):
 				start = r.start
 				stop = r.stop
 				strand = r.strand
+			elif hasattr(name, "genomic_pos") and strand is not None:
+				r = name.genomic_pos
+				name = r.name
+				start = r.start
+				stop = r.stop
 			else:
 				try:
 					name, start, stop, strand = _stranded_genomic_pos_pattern.match(name).groups()
@@ -216,8 +223,9 @@ cdef class StrandedGenomicPos(StrandedGenomicAnnotation):
 		return self.zstart == other.zstart and self.ostop == other.ostop and self.name == other.name and self.strand == other.strand
 
 	def __lt__(self, other):
-		if not isinstance(other, GenomicPos):
+		if not isinstance(other, GenomicAnnotation):
 			return NotImplemented
+		other = other.genomic_pos	
 		return ((self.name < other.name) 
 				or (self.name == other.name and 
 					((self.zstart < other.zstart) or (self.zstart == other.zstart and self.ostop < other.ostop))))
@@ -278,6 +286,13 @@ cdef class StrandedGenomicPos(StrandedGenomicAnnotation):
 		'''
 		return self.ostop
 	
+	@property
+	def strand(self):
+		'''
+		The strand
+		'''
+		return self.strand
+		
 	@property
 	def genomic_pos(self):
 		'''

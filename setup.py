@@ -26,7 +26,7 @@ with open("README.md", "r") as readme_file:
 requirements=[]
 setup(
     name='genomictools', 
-    version="0.0.3",
+    version="0.0.4",
     author="Alden Leung",
     author_email="alden.leung@gmail.com",
     description="Tools for processing genomic ranges",
