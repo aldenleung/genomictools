@@ -33,7 +33,10 @@ cdef class StrandedGenomicAnnotation(GenomicAnnotation):
 	@property
 	def stranded_genomic_pos(self):
 		pass
-
+	@property
+	def genomic_pos(self):
+		r = self.stranded_genomic_pos
+		return GenomicPos(r.name, r.ostart, r.ostop)
 		
 @cython.binding(True)
 @cython.auto_pickle(True)
