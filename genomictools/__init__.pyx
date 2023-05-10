@@ -10,7 +10,7 @@ from collections import defaultdict
 from genomictools.genomic cimport BaseRange
 from genomictools.genomic cimport GenomicPosHolder, FastRangeLookUp, vector
 
-__all__ = ["GenomicAnnotation", "StrandedGenomicAnnotation", "GenomicPos", "StrandedGenomicPos", "AbstractGenomicCollection", "GenomicCollection", "union", "intersection", "substract"]
+__all__ = ["GenomicAnnotation", "StrandedGenomicAnnotation", "GenomicPos", "StrandedGenomicPos", "AbstractGenomicCollection", "GenomicCollection", "union", "intersection", "add", "substract"]
 
 
 _genomic_pos_pattern = re.compile("([^:]+):(-?[0-9]+)(?:-(-?[0-9]+))?") # Used in parsing GenomicPos string
@@ -493,6 +493,32 @@ def union(*genomic_collections, mergefunc=None):
 			yield stored
 			stored = r
 	yield stored
+	
+@cython.binding(True)
+def add(*genomic_collections):
+	'''
+	Return all regions from all genomic collections. 
+	
+	
+	:param genomic_collections: GenomicCollection or an iterator of sorted GenomicPos
+	
+	:Example:
+	
+	.. code-block:: python
+	
+		from genomictools import GenomicCollection, GenomicPos, add
+		
+		for r in add(GenomicCollection([GenomicPos("chr1", 1, 10), GenomicPos("chr1", 15, 20), GenomicPos("chr1", 22, 24)]),
+		               GenomicCollection([GenomicPos("chr1", 8, 12), GenomicPos("chr1", 14, 21)])):
+			print(r.name, r.start, r.stop)
+		# chr1 1 10
+		# chr1 8 12
+		# chr1 14 21
+		# chr1 15 20
+		# chr1 22 24
+	'''
+	for r in heapq.merge(*genomic_collections, key=lambda k: k.genomic_pos):
+		yield r
 	
 @cython.binding(True)
 def substract(query, *refs):
