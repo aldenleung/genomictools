@@ -181,7 +181,7 @@ cdef class StrandedGenomicPos(StrandedGenomicAnnotation):
 	def __init__(self, name, start=None, stop=None, strand=None):
 		if start is None:
 			if hasattr(name, "stranded_genomic_pos"):
-				r = name.genomic_pos
+				r = name.stranded_genomic_pos
 				name = r.name
 				start = r.start
 				stop = r.stop
